@@ -3,7 +3,7 @@ import ExploreBtn from "@/components/ExploreBtn"
 import { IEvent } from "@/database/event.models";
 import { cacheLife } from "next/cache";
 
-import events from "@/lib/constant";
+import {events} from "@/lib/constant";
 
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
@@ -27,11 +27,11 @@ const page = async () => {
       <div className="mt-7 space-y-7">
         <h3>Featured Events</h3>
         <ul className="events">
-          {events && events.length > 0 && events.map((event:IEvent) => (
-            <li key={event.title} className="list-none">
-l              <EventCard {...event} />
-            </li>
-          ))}
+{events && events.length > 0 && events.map((event:I) => (
+  <li key={event.title} className="list-none">
+    <EventCard {...event} />
+  </li>
+))}
         </ul>
       </div>
     </section>
