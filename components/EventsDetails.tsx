@@ -1,124 +1,141 @@
 import React from 'react'
-
-import BookEvent from "@/components/BookEvent";
-import EventCard from "@/components/EventCard";
+import {notFound} from "next/navigation";
 import { IEvent } from "@/database/event.models";
 import { getSimlilarEventsBySlug } from "@/lib/actions/event.actions";
-import { cacheLife } from "next/cache";
 import Image from "next/image";
-import { notFound } from "next/navigation";
+import BookEvent from "@/components/BookEvent";
+import EventCard from "@/components/EventCard";
+import {cacheLife} from "next/cache";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
 
 const EventDetailItem = ({ icon, alt, label }: { icon: string; alt: string; label: string; }) => (
-  <div className="flex-row-gap-2 items-center">
-    <Image src={icon} alt={alt} width={17} height={17} />
-    <p>{label}</p>
-  </div>
+    <div className="flex-row-gap-2 items-center">
+        <Image src={icon} alt={alt} width={17} height={17} />
+        <p>{label}</p>
+    </div>
 )
 
-const EventAgenda = ({ agendaItems }: {agendaItems: string[] }) => (
-  <div className="agenda">
-    <h2>Agenda</h2>
-    <ul>
-      {agendaItems.map((item) =>  (
-        <li key={item}>{item}</li>
-      ))}
-    </ul>
-  </div>
+const EventAgenda = ({ agendaItems }: { agendaItems: string[] }) => (
+    <div className="agenda">
+        <h2>Agenda</h2>
+        <ul>
+            {agendaItems.map((item) => (
+                <li key={item}>{item}</li>
+            ))}
+        </ul>
+    </div>
 )
 
 const EventTags = ({ tags }: { tags: string[] }) => (
-  <div className="flex flex-row gap-1.5 flex-wrap">
-    {tags.map((tag) => (
-      <div className="pill" key={tag}>{tag}</div>
-    ))}
-  </div>
+    <div className="flex flex-row gap-1.5 flex-wrap">
+        {tags.map((tag) => (
+            <div className="pill" key={tag}>{tag}</div>
+        ))}
+    </div>
 )
 
-const EventsDetails = async ({ params }: { params: Promise<string> }) => {
- 'use cache'
-  cacheLife('hours')
+const EventDetails = async ({ params }: { params: Promise<string> }) => {
+    'use cache'
+    cacheLife('hours');
+    const slug = await params;
 
- const slug = await params;
+    let event;
+    try {
+        const request = await fetch(`${BASE_URL}/api/events/${slug}`, {
+            next: { revalidate: 60 }
+        });
 
-  const request = await fetch(`${BASE_URL}/api/event/${slug}`)
- const { event: { description, image, overview, date, time, location, mode, agenda, audience, tags, organizer } } = await request.json();
+        if (!request.ok) {
+            if (request.status === 404) {
+                return notFound();
+            }
+            throw new Error(`Failed to fetch event: ${request.statusText}`);
+        }
 
+        const response = await request.json();
+        event = response.event;
 
- if (!description) return notFound();
+        if (!event) {
+            return notFound();
+        }
+    } catch (error) {
+        console.error('Error fetching event:', error);
+        return notFound();
+    }
 
- const bookings = 10;
+    const { description, image, overview, date, time, location, mode, agenda, audience, tags, organizer } = event;
 
- const similarEvents: IEvent[] = await getSimlilarEventsBySlug(slug);
+    if(!description) return notFound();
 
- console.log({similarEvents});
+    const bookings = 10;
 
-  return (
-    <section id="event">
-      <div className="header">
-        <h1>Event Description</h1>
-        <p>{description}</p>
-      </div>
+    const similarEvents: IEvent[] = await getSimlilarEventsBySlug(slug);
+    //const similarEvents: IEvent[] = (await getSimlilarEventsBySlug(slug)) as unknown as IEvent[];
 
-      <div className="details">
-        {/* left side - Event content */}
-        <div className="content">
-          <Image src={image} alt="Event Banner" width={800} height={800} className="banner" />
+    return (
+        <section id="event">
+            <div className="header">
+                <h1>Event Description</h1>
+                <p>{description}</p>
+            </div>
 
-          <section className="flex-col gap-2">
-            <h2>Overview</h2>
-            <p>{overview}</p>
-          </section>
+            <div className="details">
+                {/*    Left Side - Event Content */}
+                <div className="content">
+                    <Image src={image} alt="Event Banner" width={800} height={800} className="banner" />
 
-          <section className="flex-col gap-2">
-            <h2>Event Details</h2>
+                    <section className="flex-col-gap-2">
+                        <h2>Overview</h2>
+                        <p>{overview}</p>
+                    </section>
 
-            <EventDetailItem icon="/icons/calendar.svg" alt="calendar" label={date} />
-            <EventDetailItem icon="/icons/clock.svg" alt="clock" label={time} />
-            <EventDetailItem icon="/icons/pin.svg" alt="pin" label={location} />
-            <EventDetailItem icon="/icons/mode.svg" alt="mode" label={mode} />
-            <EventDetailItem icon="/icons/audience.svg" alt="audience" label={audience} />
-          </section>
+                    <section className="flex-col-gap-2">
+                        <h2>Event Details</h2>
 
-          <EventAgenda agendaItems={agenda} />
+                        <EventDetailItem icon="/icons/calendar.svg" alt="calendar" label={date} />
+                        <EventDetailItem icon="/icons/clock.svg" alt="clock" label={time} />
+                        <EventDetailItem icon="/icons/pin.svg" alt="pin" label={location} />
+                        <EventDetailItem icon="/icons/mode.svg" alt="mode" label={mode} />
+                        <EventDetailItem icon="/icons/audience.svg" alt="audience" label={audience} />
+                    </section>
 
-          <section className="flex-col-gap-2">
-            <h2>About the Organizer</h2>
-            <p>{organizer}</p>
-          </section>
+                    <EventAgenda agendaItems={agenda} />
 
-          <EventTags tags={tags} />
-        </div>
+                    <section className="flex-col-gap-2">
+                        <h2>About the Organizer</h2>
+                        <p>{organizer}</p>
+                    </section>
 
-        {/* right side - Bookin form */}
-        <aside className="booking">
-          <div className="signup-card">
-            <h2>Book your spot</h2>
-            {bookings > 0 ? (
-              <p className="text-sm">
-                Join {bookings} others who have booked their spot for this event!
-              </p>
-            ): (<p className="text-sm">
-                Be the first to book a spot for this event!
-              </p>)}
+                    <EventTags tags={tags} />
+                </div>
 
-              <BookEvent eventId={event._id} slug={event.slug} />
-          </div>
-        </aside>
-      </div>
+                {/*    Right Side - Booking Form */}
+                <aside className="booking">
+                    <div className="signup-card">
+                        <h2>Book Your Spot</h2>
+                        {bookings > 0 ? (
+                            <p className="text-sm">
+                                Join {bookings} people who have already booked their spot!
+                            </p>
+                        ): (
+                            <p className="text-sm">Be the first to book your spot!</p>
+                        )}
 
-      <div className="flex w-full flex-col gap-4 pt-20">
-        <h2>Similar Events</h2>
+                        <BookEvent eventId={event._id} slug={event.slug} />
+                    </div>
+                </aside>
+            </div>
 
-        <div className="events">
-          {similarEvents.length > 0 && similarEvents.map((similarEvent: IEvent) => (
-            <EventCard key={similarEvent.title} {...similarEvent } />
-          ))}
-        </div>
-      </div>
-    </section>
-  )
+            <div className="flex w-full flex-col gap-4 pt-20">
+                <h2>Similar Events</h2>
+                <div className="events">
+                    {similarEvents.length > 0 && similarEvents.map((similarEvent: IEvent) => (
+                        <EventCard key={similarEvent.title} {...similarEvent} />
+                    ))}
+                </div>
+            </div>
+        </section>
+    )
 }
-
-export default EventsDetails
+export default EventDetails

@@ -15,3 +15,5 @@ const EventDetailsPage = async ({ params }: { params: Promise<{slug: string}>}) 
 }
 
 export default EventDetailsPage
+
+
